@@ -16,6 +16,10 @@
 
 var SHEET_NAME = 'data';
 
+// ไฟล์ Google Sheet ที่ใช้เป็นฐานข้อมูล (ไฟล์เก่าของบริษัท)
+// ถ้าเว้นว่าง '' จะใช้ไฟล์ที่สคริปต์นี้ผูกอยู่ (getActiveSpreadsheet)
+var SPREADSHEET_ID = '1I5NFo9VyJSAJYvbbEpf7y0dpwKF6eMTI';
+
 // ลำดับคอลัมน์ ต้องตรงกับ schema ของ record ใน index.html
 var FIELDS = [
   'no','date','year','month','ym','location','system','job','job_raw',
@@ -55,8 +59,14 @@ function setup() {
   getSheet_();
 }
 
+function getSpreadsheet_() {
+  return SPREADSHEET_ID
+    ? SpreadsheetApp.openById(SPREADSHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+}
+
 function getSheet_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet_();
   var sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
@@ -64,6 +74,19 @@ function getSheet_() {
   }
   if (sh.getLastRow() === 0) sh.appendRow(FIELDS);
   return sh;
+}
+
+/* รันครั้งเดียว: คัดลอกข้อมูล 283 รายการจากชีตชั่วคราว (ที่เราสร้างตอนแรก)
+   มาไว้ในแท็บ data ของไฟล์ฐานข้อมูลใหม่ — แล้วลบฟังก์ชันนี้ทิ้งได้ */
+function migrateData() {
+  var SOURCE_ID = '1gQBX44ZxKXSs0PoVMttIZf9OL-Ug85szawncDZZJFOU'; // ชีตที่เราสร้างใหม่ตอนแรก
+  var src = SpreadsheetApp.openById(SOURCE_ID).getSheetByName(SHEET_NAME);
+  if (!src) throw new Error('ไม่พบแท็บ data ในไฟล์ต้นทาง');
+  var vals = src.getDataRange().getValues();
+  var dst = getSheet_();                 // แท็บ data ของไฟล์ปลายทาง (ไฟล์ใหม่)
+  dst.clear();
+  dst.getRange(1, 1, vals.length, vals[0].length).setValues(vals);
+  return 'OK: ย้ายข้อมูล ' + (vals.length - 1) + ' รายการเรียบร้อย';
 }
 
 /* ---------- token utilities ---------- */
