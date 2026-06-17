@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.google.com)",
+      "WebFetch(domain:doc-00-cc-sheets.googleusercontent.com)",
+      "PowerShell(gh --version)",
+      "PowerShell(gh auth status)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git -c 'user.name=ITD HONGSA' -c user.email=taizasaladon@gmail.com commit -q -m 'Belt Conveyor Dashboard: Google Sheets realtime backend *)",
+      "Bash(git branch *)"
+    ]
+  }
+}
