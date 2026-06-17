@@ -401,6 +401,23 @@ function setLiveStatus(state,text){
   const lab=document.getElementById('live-lab');if(lab)lab.textContent=text||state;
 }
 
+/* ---- จัดรูปแบบ 1 แถวจาก Sheet ให้ตรงกับที่ dashboard ใช้ ----
+   Google Sheets แปลง "2025-01-01" เป็น Date object → ต้องดึงกลับเป็น yyyy-MM-dd */
+function pad2(n){return String(n).padStart(2,'0');}
+function normalizeRow(r){
+  if(r.date){
+    const d=new Date(r.date);
+    if(!isNaN(d.getTime())){
+      const ds=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+      r.date=ds; r.ym=ds.slice(0,7); r.year=d.getFullYear(); r.month=d.getMonth()+1;
+    }
+  }
+  // กันค่าตัวเลขที่อาจมาเป็น string
+  ['len_in','joint_in','c_belt','c_equip','c_labor','c_machine','c_contractor','c_total']
+    .forEach(k=>{ if(r[k]==='' ) r[k]=null; else if(r[k]!=null) r[k]=+r[k]; });
+  return r;
+}
+
 /* ---- ดึงข้อมูลทั้งหมดจาก Google Sheet ---- */
 let _lastFp='';
 async function syncFromSheet(silent){
@@ -411,6 +428,7 @@ async function syncFromSheet(silent){
     if(!res.ok)throw new Error('HTTP '+res.status);
     const rows=await res.json();
     if(!Array.isArray(rows))throw new Error('bad payload');
+    rows.forEach(normalizeRow);   // จัดรูปแบบวันที่/ตัวเลขให้ตรงกับที่ dashboard ใช้
     const fp=rows.length+'|'+(rows.length?JSON.stringify(rows[rows.length-1]):'');
     if(fp!==_lastFp){              // อัปเดตหน้าจอเฉพาะเมื่อข้อมูลเปลี่ยน
       _lastFp=fp;DATA=rows;persist();
