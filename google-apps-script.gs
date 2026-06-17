@@ -18,7 +18,7 @@ var SHEET_NAME = 'data';
 
 // ไฟล์ Google Sheet ที่ใช้เป็นฐานข้อมูล (ไฟล์เก่าของบริษัท)
 // ถ้าเว้นว่าง '' จะใช้ไฟล์ที่สคริปต์นี้ผูกอยู่ (getActiveSpreadsheet)
-var SPREADSHEET_ID = '1I5NFo9VyJSAJYvbbEpf7y0dpwKF6eMTI';
+var SPREADSHEET_ID = '1qhA-z6XupwU5CLgv2l-v3EJzhGLwdFAqhEdR-rTJnO0';
 
 // ลำดับคอลัมน์ ต้องตรงกับ schema ของ record ใน index.html
 var FIELDS = [
