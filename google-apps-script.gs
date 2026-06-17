@@ -1,14 +1,17 @@
 /**********************************************************************
  * ITD HONGSA — Belt Conveyor Dashboard : Google Sheets backend API
+ * (มีระบบ Login + Token ป้องกันข้อมูล)
  * ------------------------------------------------------------------
- * วิธีใช้ (ดูละเอียดใน README.md):
- *   1) สร้าง Google Sheet ใหม่ 1 ไฟล์
- *   2) เมนู Extensions > Apps Script  แล้ววางโค้ดนี้ทั้งหมด (แทนของเดิม)
- *   3) Deploy > New deployment > type: Web app
- *        - Execute as: Me
- *        - Who has access: Anyone
- *      คัดลอก "Web app URL" ไปวางใน index.html ที่ CONFIG.API_URL
- *   4) (ครั้งเดียว) รันฟังก์ชัน setup() จากเมนู Apps Script เพื่อสร้างหัวตาราง
+ * วิธีติดตั้ง (ดูละเอียดใน README.md):
+ *   1) Extensions > Apps Script  แล้ววางโค้ดนี้ทั้งหมด (แทนของเดิม)
+ *   2) ตั้งรหัสผ่าน: แก้ค่า PASSWORD ในฟังก์ชัน setCredentials() ด้านล่าง
+ *      แล้วเลือกฟังก์ชัน setCredentials > กด Run 1 ครั้ง (Allow สิทธิ์)
+ *   3) Deploy > Manage deployments > (ดินสอ) Edit > Version: New version
+ *      - Execute as: Me   /   Who has access: Anyone   > Deploy
+ *      URL เดิมใช้ได้ต่อ ไม่ต้องเปลี่ยนใน index.html
+ *
+ * ความปลอดภัย: รหัสผ่าน (เก็บเป็น hash) และ SECRET อยู่ใน Script Properties
+ * ฝั่งเซิร์ฟเวอร์เท่านั้น — ไม่อยู่ในโค้ดที่ push ขึ้น GitHub
  **********************************************************************/
 
 var SHEET_NAME = 'data';
@@ -27,6 +30,31 @@ var NUMERIC = {
   c_belt:1, c_equip:1, c_labor:1, c_machine:1, c_contractor:1, c_total:1
 };
 
+var TOKEN_TTL_MS = 1000 * 60 * 60 * 12;   // อายุ token 12 ชั่วโมง
+var PROPS = PropertiesService.getScriptProperties();
+
+/* ============================================================
+ *  ตั้งรหัสผ่าน — แก้ค่า PASSWORD ด้านล่าง แล้ว Run ฟังก์ชันนี้ 1 ครั้ง
+ *  (รหัสจริงจะถูกเก็บเป็น hash ใน Script Properties ไม่อยู่ในโค้ด)
+ * ============================================================ */
+function setCredentials() {
+  var PASSWORD = 'CHANGE_ME';   // <<<<<< เปลี่ยนเป็นรหัสผ่านที่ต้องการ แล้วกด Run
+  // ----------------------------------------------------------
+  if (!PASSWORD || PASSWORD === 'CHANGE_ME') {
+    throw new Error('กรุณาตั้งค่า PASSWORD ในฟังก์ชัน setCredentials() ก่อนรัน');
+  }
+  if (!PROPS.getProperty('SECRET')) {
+    PROPS.setProperty('SECRET', Utilities.getUuid() + Utilities.getUuid());
+  }
+  PROPS.setProperty('PWHASH', sha256_(PASSWORD));
+  return 'OK: ตั้งรหัสผ่านเรียบร้อยแล้ว';
+}
+
+/* รันครั้งเดียวเพื่อสร้างหัวตาราง (ไม่บังคับ — getSheet_ สร้างให้อัตโนมัติ) */
+function setup() {
+  getSheet_();
+}
+
 function getSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(SHEET_NAME);
@@ -38,14 +66,33 @@ function getSheet_() {
   return sh;
 }
 
-/* รันครั้งเดียวเพื่อสร้างหัวตาราง */
-function setup() {
-  getSheet_();
+/* ---------- token utilities ---------- */
+function hex_(bytes) {
+  return bytes.map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
+}
+function sha256_(s) {
+  return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8));
+}
+function hmac_(s) {
+  return hex_(Utilities.computeHmacSha256Signature(String(s), PROPS.getProperty('SECRET') || ''));
+}
+function makeToken_() {
+  var exp = Date.now() + TOKEN_TTL_MS;
+  return exp + '.' + hmac_(exp);
+}
+function checkToken_(t) {
+  if (!t || !PROPS.getProperty('PWHASH')) return false;
+  var p = String(t).split('.');
+  if (p.length !== 2) return false;
+  var exp = Number(p[0]);
+  if (!exp || Date.now() > exp) return false;
+  return hmac_(p[0]) === p[1];
 }
 
-/* ---------- อ่านข้อมูลทั้งหมด → JSON ---------- */
+/* ---------- อ่านข้อมูลทั้งหมด → JSON (ต้องมี token) ---------- */
 function doGet(e) {
   try {
+    if (!checkToken_(e && e.parameter && e.parameter.token)) return json_({ error: 'auth' });
     var sh = getSheet_();
     var values = sh.getDataRange().getValues();
     var out = [];
@@ -73,14 +120,27 @@ function doGet(e) {
     }
     return json_(out);
   } catch (err) {
-    return json_({ ok: false, error: String(err) });
+    return json_({ error: String(err) });
   }
 }
 
-/* ---------- เพิ่ม/seed ข้อมูล ---------- */
+/* ---------- login / เพิ่ม / seed ---------- */
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents || '{}');
+
+    // --- login: ตรวจรหัสผ่าน แล้วออก token ---
+    if (body.action === 'login') {
+      var ph = PROPS.getProperty('PWHASH');
+      if (!ph) return json_({ ok: false, error: 'ยังไม่ได้ตั้งรหัสผ่าน (รัน setCredentials ก่อน)' });
+      if (sha256_(String(body.password || '')) === ph) {
+        return json_({ ok: true, token: makeToken_() });
+      }
+      return json_({ ok: false, error: 'รหัสผ่านไม่ถูกต้อง' });
+    }
+
+    // --- ทุก action ที่เหลือต้องมี token ที่ถูกต้อง ---
+    if (!checkToken_(body.token)) return json_({ ok: false, error: 'auth' });
     var sh = getSheet_();
 
     if (body.action === 'add' && body.record) {
@@ -89,7 +149,6 @@ function doPost(e) {
     }
 
     if (body.action === 'seed' && Array.isArray(body.records)) {
-      // เขียนข้อมูลเริ่มต้นทั้งชุด (ล้างของเดิมก่อน)
       sh.clear();
       sh.appendRow(FIELDS);
       var rows = body.records.map(rowFromRecord_);
