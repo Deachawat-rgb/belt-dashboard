@@ -428,7 +428,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
       <div class="sec-lbl">ข้อมูลงานซ่อม</div>
       <div class="frow">
         <div class="field"><label>No.</label><input id="ri-no" placeholder="เว้นว่าง = ต่อเลขล่าสุดอัตโนมัติ"></div>
-        <div class="field" style="visibility:hidden"></div>
+        <div class="field"><label>ประเภทงาน</label><select id="ri-job"></select></div>
       </div>
       <div class="field full" style="margin-bottom:11px"><label>Equipment Name *</label><input id="ri-equip" placeholder="เช่น CONVEYOR LINE BW2400"></div>
       <div class="frow">
@@ -475,6 +475,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
 /* ================= DATA ================= */
 const SEED = [];   // ข้อมูลย้ายไปอยู่ใน Google Sheet ทั้งหมดแล้ว (กู้ชุดเดิมได้จาก git history)
 const JOB_TYPES = ['เปลี่ยน','เปลี่ยน/Resplice','Resplice','Short','Extend','Prejoint','อื่นๆ'];
+const REPAIR_JOB_TYPES = ['ซ่อมร้อนสายพาน'];   // ประเภทงานซ่อม (ไฟล์เดิมไม่มี — กำหนดเอง)
 const SYSTEMS = ['WA','WB','WN','SPD','CR','BWE','อื่นๆ'];
 const COST_KEYS=['c_belt','c_equip','c_labor','c_machine','c_contractor'];
 const LEN_CAP=2000; // ความยาวเกินค่านี้ถือเป็นข้อมูลผิดปกติ (กรอกเลข SMU ผิดช่อง) ไม่นำมารวมยอด
@@ -631,12 +632,13 @@ function buildFilters(){
   fill('f-year',[['','ทุกปี'],...years.map(y=>[y,'ปี '+y])]);
   fill('f-month',[['','ทุกเดือน'],...THMON.map((m,i)=>[i+1,m])]);
   fill('f-system',[['','ทุกระบบ'],...SYSTEMS.map(s=>[s,s])]);
-  fill('f-job',[['','ทุกประเภท'],...JOB_TYPES.map(j=>[j,j])]);
+  fill('f-job',[['','ทุกประเภท'],...(MODE==='repair'?REPAIR_JOB_TYPES:JOB_TYPES).map(j=>[j,j])]);
   refreshLocOptions();
   fill('f-size',[['','ทุกขนาด'],...SIZES.map(s=>[s,s==='ไม่ระบุ'?'ไม่ระบุ':s+' มม.'])]);
   // entry form selects
   fill('i-system',SYSTEMS.map(s=>[s,s]));
   fill('ri-system',SYSTEMS.map(s=>[s,s]));
+  fill('ri-job',REPAIR_JOB_TYPES.map(j=>[j,j]));
   fill('i-job',JOB_TYPES.map(j=>[j,j]));
   fill('i-contractor',[['ITD (ภายใน)','ITD (ภายใน)'],['TKS','TKS'],['CTL','CTL']]);
   document.getElementById('dl-brand').innerHTML=uniq(DATA.map(d=>d.brand).filter(Boolean)).map(b=>`<option value="${b}">`).join('');
@@ -849,7 +851,7 @@ function renderSummary(rows){
   let tLen=0,tBelt=0,tRepair=0,tMach=0,tAll=0,tJobs=0;
   const rowHTML=(label,r,bold)=>{
     const c=j=>r.filter(x=>x.job===j).length;
-    const other=r.filter(x=>['Prejoint','อื่นๆ'].includes(x.job)).length;
+    const other=r.length-['เปลี่ยน','เปลี่ยน/Resplice','Resplice','Short','Extend'].reduce((a,j)=>a+c(j),0);
     const len=r.reduce((a,x)=>a+validLen(x),0),belt=sum(r,'c_belt'),
           repair=sum(r,'c_equip')+sum(r,'c_labor')+sum(r,'c_contractor'),
           mach=sum(r,'c_machine'),all=sum(r,'c_total');
@@ -867,7 +869,7 @@ function renderSummary(rows){
   locs.forEach(loc=>tb.insertAdjacentHTML('beforeend',rowHTML(loc,rows.filter(x=>x.location===loc),false)));
   if(rolled&&rolled.length)
     tb.insertAdjacentHTML('beforeend',rowHTML(`อื่นๆ อีก ${rolled.length} จุด`,rows.filter(x=>rolled.includes(x.location)),true));
-  const otherTot=tot['Prejoint']+tot['อื่นๆ'];
+  const otherTot=tJobs-(tot['เปลี่ยน']+tot['เปลี่ยน/Resplice']+tot['Resplice']+tot['Short']+tot['Extend']);
   const nloc=uniq(rows.map(r=>r.location)).length;
   document.querySelector('#tbl-summary tfoot').innerHTML=`<tr>
     <td>รวมทั้งสิ้น (${nloc} จุด)</td><td>${tot['เปลี่ยน']}</td><td>${tot['เปลี่ยน/Resplice']}</td>
@@ -950,7 +952,7 @@ function saveRepair(){
   const sizeM=(equip.match(/(1800|2000|2200|2400)/)||[])[1]||'';
   const rec={
     no:gv('ri-no')||String(nextRepairNo()),date,year:d.getFullYear(),month:d.getMonth()+1,ym:date.slice(0,7),
-    location:loc,system:gv('ri-system')||'อื่นๆ',job:'อื่นๆ',job_raw:equip,
+    location:loc,system:gv('ri-system')||'อื่นๆ',job:gv('ri-job')||'ซ่อมร้อนสายพาน',job_raw:equip,
     len_in:gn('ri-len')||null,len_out:null,joint_in:null,
     brand:gv('ri-brand'),size:sizeM,reason:gv('ri-note'),
     puller:'',splicer:gv('ri-splicer'),contractor:(gv('ri-splicer')==='ผรม.'?'ผรม.':'ITD (ภายใน)'),
