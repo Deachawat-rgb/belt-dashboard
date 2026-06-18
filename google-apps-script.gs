@@ -16,9 +16,11 @@
 
 var SHEET_NAME = 'data';
 
-// ไฟล์ Google Sheet ที่ใช้เป็นฐานข้อมูล (ไฟล์เก่าของบริษัท)
+// ไฟล์ Google Sheet ที่ใช้เป็นฐานข้อมูล — ไฟล์ A (มีงานเปลี่ยน 283 รายการอยู่แล้วในแท็บ data)
+//   แท็บ data   = งานเปลี่ยนสายพาน
+//   แท็บ repair = งานซ่อมสายพาน (สร้างให้อัตโนมัติตอน seed ครั้งแรก)
 // ถ้าเว้นว่าง '' จะใช้ไฟล์ที่สคริปต์นี้ผูกอยู่ (getActiveSpreadsheet)
-var SPREADSHEET_ID = '1qhA-z6XupwU5CLgv2l-v3EJzhGLwdFAqhEdR-rTJnO0';
+var SPREADSHEET_ID = '1gQBX44ZxKXSs0PoVMttIZf9OL-Ug85szawncDZZJFOU';
 
 // ลำดับคอลัมน์ ต้องตรงกับ schema ของ record ใน index.html
 var FIELDS = [
@@ -65,11 +67,16 @@ function getSpreadsheet_() {
     : SpreadsheetApp.getActiveSpreadsheet();
 }
 
-function getSheet_() {
+// แท็บที่อนุญาต: งานเปลี่ยน = data, งานซ่อม = repair (ถ้าส่งค่าอื่นมา จะ fallback เป็น data)
+var ALLOWED_TABS = { data: 1, repair: 1 };
+function tabName_(t) { return (t && ALLOWED_TABS[t]) ? t : SHEET_NAME; }
+
+function getSheet_(tab) {
+  var name = tabName_(tab);
   var ss = getSpreadsheet_();
-  var sh = ss.getSheetByName(SHEET_NAME);
+  var sh = ss.getSheetByName(name);
   if (!sh) {
-    sh = ss.insertSheet(SHEET_NAME);
+    sh = ss.insertSheet(name);   // สร้างแท็บอัตโนมัติถ้ายังไม่มี (เช่น repair ครั้งแรก)
     sh.appendRow(FIELDS);
   }
   if (sh.getLastRow() === 0) sh.appendRow(FIELDS);
@@ -116,7 +123,7 @@ function checkToken_(t) {
 function doGet(e) {
   try {
     if (!checkToken_(e && e.parameter && e.parameter.token)) return json_({ error: 'auth' });
-    var sh = getSheet_();
+    var sh = getSheet_(e && e.parameter && e.parameter.tab);
     var values = sh.getDataRange().getValues();
     var out = [];
     if (values.length > 1) {
@@ -164,7 +171,7 @@ function doPost(e) {
 
     // --- ทุก action ที่เหลือต้องมี token ที่ถูกต้อง ---
     if (!checkToken_(body.token)) return json_({ ok: false, error: 'auth' });
-    var sh = getSheet_();
+    var sh = getSheet_(body.tab);
 
     if (body.action === 'add' && body.record) {
       sh.appendRow(rowFromRecord_(body.record));

@@ -70,6 +70,17 @@ header.topbar{background:linear-gradient(105deg,var(--navy) 0%,var(--navy2) 55%,
 .filterbar .spacer{flex:1}
 .scope-note{font-size:11.5px;color:var(--muted);background:#eef4fc;padding:6px 10px;border-radius:8px;align-self:center}
 
+/* ---------- page mode tabs (เปลี่ยน / ซ่อม) ---------- */
+.modebar{display:flex;gap:10px;margin-top:14px}
+.modetab{border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:12px;
+  padding:11px 24px;font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:9px;transition:.15s;box-shadow:var(--shadow)}
+.modetab:hover{border-color:var(--blue);color:var(--blue)}
+.modetab.active{background:linear-gradient(105deg,var(--navy) 0%,var(--blue) 100%);color:#fff;border-color:transparent;
+  box-shadow:0 4px 16px rgba(16,40,90,.22)}
+.modetab .mt-sub{font-size:10.5px;font-weight:600;opacity:.7;letter-spacing:.3px}
+@media screen and (max-width:560px){.modetab{flex:1;justify-content:center;padding:11px 8px;font-size:13px}.modetab .mt-sub{display:none}}
+
 /* ---------- KPI ---------- */
 .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:14px}
 .kpi{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 15px;
@@ -248,7 +259,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
   <header class="topbar">
     <div class="brand">
       <div>
-        <h1>สรุปงานเปลี่ยน / ซ่อมสายพานลำเลียง</h1>
+        <h1 id="page-title">สรุปงานเปลี่ยนสายพานลำเลียง</h1>
         <p>Belt Conveyor Replacement &amp; Repair Report — ระบบสายพานลำเลียงบ่อเหมือง</p>
       </div>
     </div>
@@ -261,6 +272,12 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
     <button class="btn btn-light no-print" onclick="window.print()">🖨️ ปริ้น A4</button>
     <button class="btn btn-light no-print" onclick="doLogout()" title="ออกจากระบบ">⎋ ออก</button>
   </header>
+
+  <!-- PAGE MODE TABS (เปลี่ยน / ซ่อม) -->
+  <div class="modebar no-print">
+    <button class="modetab active" id="mt-replace" onclick="switchMode('replace')">🔧 งานเปลี่ยนสายพาน <span class="mt-sub">Belt Replacement</span></button>
+    <button class="modetab" id="mt-repair" onclick="switchMode('repair')">🛠️ งานซ่อมสายพาน <span class="mt-sub">Belt Repair</span></button>
+  </div>
 
   <!-- FILTERS -->
   <div class="filterbar no-print">
@@ -354,13 +371,13 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
   </div>
 
   <footer class="foot">ITD J.2411 Mae Moh Mine Phase 9 · ระบบสรุปงานสายพานลำเลียง · ออกแบบเพื่อนำเสนอผู้บริหาร · ข้อมูลกรอกใหม่จะอัปเดตหน้านี้ทันที<br>
-  <span style="font-size:10px">หมายเหตุ: ยอดความยาวไม่รวม 4 รายการที่กรอกค่าผิดปกติ (&gt;2,000 ม. คาดว่ากรอกเลข SMU ผิดช่อง) · ค่าใช้จ่ายบันทึกครบตั้งแต่ปี 2024 เป็นต้นมา · ข้อมูลขนาดสายพานระบุไว้ 65 จาก 283 รายการ ที่เหลือแสดงเป็น "ไม่ระบุ" ควรกรอกเพิ่มเพื่อให้การแยกขนาดสมบูรณ์</span></footer>
+  <span style="font-size:10px" id="foot-note">หมายเหตุ: ยอดความยาวไม่รวม 4 รายการที่กรอกค่าผิดปกติ (&gt;2,000 ม. คาดว่ากรอกเลข SMU ผิดช่อง) · ค่าใช้จ่ายบันทึกครบตั้งแต่ปี 2024 เป็นต้นมา · ข้อมูลขนาดสายพานระบุไว้ 65 จาก 283 รายการ ที่เหลือแสดงเป็น "ไม่ระบุ" ควรกรอกเพิ่มเพื่อให้การแยกขนาดสมบูรณ์</span></footer>
 </div>
 
 <!-- DATA ENTRY DRAWER -->
 <div class="drawer-bg" id="drawer-bg" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
-  <div class="drawer-head"><h3>➕ บันทึกงานสายพานใหม่</h3><div class="x" onclick="closeDrawer()">✕</div></div>
+  <div class="drawer-head"><h3 id="drawer-title">➕ บันทึกงานเปลี่ยนสายพาน</h3><div class="x" onclick="closeDrawer()">✕</div></div>
   <div class="drawer-body">
     <div class="sec-lbl">ข้อมูลงาน</div>
     <div class="frow">
@@ -441,13 +458,24 @@ try{const a=JSON.parse(sessionStorage.getItem(AUTH_KEY)||'{}');if(a&&a.token){AU
 function saveAuth(){try{sessionStorage.setItem(AUTH_KEY,JSON.stringify(AUTH));}catch(e){}}
 function clearAuth(){AUTH={token:'',user:''};try{sessionStorage.removeItem(AUTH_KEY);}catch(e){}}
 
-/* persistence: localStorage = แคชออฟไลน์, Google Sheet = ฐานข้อมูลกลาง */
+/* ===== โหมดหน้า: งานเปลี่ยน vs งานซ่อม (แยกข้อมูลคนละแท็บใน Google Sheet) ===== */
+let MODE='replace';
+const TABS={replace:'data',repair:'repair'};
+const MODE_TITLE={replace:'สรุปงานเปลี่ยนสายพานลำเลียง',repair:'สรุปงานซ่อมสายพานลำเลียง'};
+const MODE_DRAWER={replace:'➕ บันทึกงานเปลี่ยนสายพาน',repair:'➕ บันทึกงานซ่อมสายพาน'};
+const MODE_NOTE={
+  replace:'หมายเหตุ: ยอดความยาวไม่รวมรายการที่กรอกค่าผิดปกติ (&gt;2,000 ม. คาดว่ากรอกเลข SMU ผิดช่อง) · ค่าใช้จ่ายบันทึกครบตั้งแต่ปี 2024 เป็นต้นมา · ขนาดสายพานที่ไม่ได้ระบุจะแสดงเป็น "ไม่ระบุ"',
+  repair:'หมายเหตุ: ข้อมูลนำเข้าจากไฟล์บันทึกงานซ่อมสายพาน (Data repair belt conveyor) · ค่าใช้จ่าย/ขนาดบางรายการยังไม่ได้บันทึก จะแสดงเป็น "ไม่ระบุ"'
+};
+
+/* persistence: localStorage = แคชออฟไลน์ (แยกตามโหมด), Google Sheet = ฐานข้อมูลกลาง */
 const LS_KEY='itd_belt_dashboard_v1';
+function lsKey(){return LS_KEY+'_'+MODE;}
 function loadData(){
-  try{const s=localStorage.getItem(LS_KEY);if(s){const a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a;}}catch(e){}
-  return JSON.parse(JSON.stringify(SEED));
+  try{const s=localStorage.getItem(lsKey());if(s){const a=JSON.parse(s);if(Array.isArray(a))return a;}}catch(e){}
+  return [];
 }
-function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify(DATA));}catch(e){}}
+function persist(){try{localStorage.setItem(lsKey(),JSON.stringify(DATA));}catch(e){}}
 let DATA=loadData();
 let charts={};
 
@@ -482,14 +510,16 @@ async function syncFromSheet(silent){
   if(!CONFIG.API_URL){setLiveStatus('offline','ออฟไลน์');return;}
   if(!AUTH.token){showLogin();return;}
   if(!silent)setLiveStatus('syncing','กำลังซิงค์…');
+  const reqMode=MODE;            // จำโหมดที่ขอ เผื่อผู้ใช้สลับหน้าระหว่างรอ
   try{
-    const res=await fetch(CONFIG.API_URL+'?token='+encodeURIComponent(AUTH.token)+'&t='+Date.now());
+    const res=await fetch(CONFIG.API_URL+'?token='+encodeURIComponent(AUTH.token)+'&tab='+TABS[reqMode]+'&t='+Date.now());
     if(!res.ok)throw new Error('HTTP '+res.status);
     const rows=await res.json();
     if(!Array.isArray(rows)){               // {error:'auth'} = token หมดอายุ/ไม่ถูกต้อง
       if(rows&&rows.error==='auth'){handleAuthExpired();return;}
       throw new Error('bad payload');
     }
+    if(reqMode!==MODE)return;     // ผู้ใช้สลับหน้าไปแล้ว — ทิ้งผลลัพธ์ของโหมดเก่า
     rows.forEach(normalizeRow);   // จัดรูปแบบวันที่/ตัวเลขให้ตรงกับที่ dashboard ใช้
     const fp=rows.length+'|'+(rows.length?JSON.stringify(rows[rows.length-1]):'');
     if(fp!==_lastFp){              // อัปเดตหน้าจอเฉพาะเมื่อข้อมูลเปลี่ยน
@@ -508,7 +538,7 @@ async function pushToSheet(rec){
   if(!CONFIG.API_URL)return false;
   const res=await fetch(CONFIG.API_URL,{
     method:'POST',
-    body:JSON.stringify({action:'add',token:AUTH.token,record:rec})  // text/plain → เลี่ยง CORS preflight
+    body:JSON.stringify({action:'add',token:AUTH.token,tab:TABS[MODE],record:rec})  // text/plain → เลี่ยง CORS preflight
   });
   const out=await res.json().catch(()=>({}));
   if(out.error==='auth'){handleAuthExpired();throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');}
@@ -522,12 +552,35 @@ async function seedSheet(records){
   if(!AUTH.token){alert('กรุณาเข้าสู่ระบบก่อน');return;}
   if(!Array.isArray(records)||!records.length){alert('seedSheet(records): ต้องส่งอาเรย์ข้อมูล');return;}
   if(!confirm('อัปโหลด '+records.length+' รายการขึ้น Google Sheet?\n(จะล้างข้อมูลเดิมใน Sheet แล้วเขียนใหม่ทั้งหมด)'))return;
-  const res=await fetch(CONFIG.API_URL,{method:'POST',body:JSON.stringify({action:'seed',token:AUTH.token,records})});
+  const res=await fetch(CONFIG.API_URL,{method:'POST',body:JSON.stringify({action:'seed',token:AUTH.token,tab:TABS[MODE],records})});
   const out=await res.json().catch(()=>({}));
   if(out.ok){alert('อัปโหลดสำเร็จ '+(out.inserted||records.length)+' รายการ');_lastFp='';syncFromSheet();}
   else alert('ผิดพลาด: '+(out.error||res.status));
 }
 window.seedSheet=seedSheet;
+
+/* ===== สลับโหมดหน้า (งานเปลี่ยน / งานซ่อม) ===== */
+function updateModeUI(){
+  const t=document.getElementById('page-title');if(t)t.textContent=MODE_TITLE[MODE];
+  const d=document.getElementById('drawer-title');if(d)d.textContent=MODE_DRAWER[MODE];
+  const n=document.getElementById('foot-note');if(n)n.innerHTML=MODE_NOTE[MODE];
+  const a=document.getElementById('mt-replace'),b=document.getElementById('mt-repair');
+  if(a)a.classList.toggle('active',MODE==='replace');
+  if(b)b.classList.toggle('active',MODE==='repair');
+}
+function switchMode(m){
+  if(m===MODE||!TABS[m])return;
+  persist();                       // เก็บแคชของโหมดเดิมก่อนสลับ
+  MODE=m;
+  updateModeUI();
+  DATA=loadData();                 // โหลดแคชของโหมดใหม่ (ถ้ามี)
+  _lastFp='';
+  buildFilters();
+  document.getElementById('f-year').value='';   // เริ่มที่ภาพรวมทั้งโครงการ
+  render();
+  if(AUTH.token)syncFromSheet();   // ดึงข้อมูลล่าสุดของโหมดนี้จากส่วนกลาง
+}
+window.switchMode=switchMode;
 
 /* ================= FILTERS ================= */
 function uniq(arr){return [...new Set(arr)];}
@@ -858,6 +911,7 @@ function doLogout(){
 }
 
 /* ================= INIT ================= */
+updateModeUI();
 buildFilters();
 document.getElementById('f-year').value='';   // เริ่มต้น: ภาพรวมทั้งโครงการ
 render();
