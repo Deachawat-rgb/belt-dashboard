@@ -303,7 +303,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
       <div class="chartbox"><canvas id="ch-trend"></canvas></div>
     </div>
     <div class="panel">
-      <h3>🧩 สัดส่วนประเภทงาน</h3>
+      <h3 id="t-jobtitle">🧩 สัดส่วนประเภทงาน</h3>
       <div class="chartbox"><canvas id="ch-job"></canvas></div>
     </div>
     <div class="panel">
@@ -564,6 +564,7 @@ function updateModeUI(){
   const t=document.getElementById('page-title');if(t)t.textContent=MODE_TITLE[MODE];
   const d=document.getElementById('drawer-title');if(d)d.textContent=MODE_DRAWER[MODE];
   const n=document.getElementById('foot-note');if(n)n.innerHTML=MODE_NOTE[MODE];
+  const jt=document.getElementById('t-jobtitle');if(jt)jt.textContent=MODE==='repair'?'🧩 สัดส่วนตามระบบ':'🧩 สัดส่วนประเภทงาน';
   const a=document.getElementById('mt-replace'),b=document.getElementById('mt-repair');
   if(a)a.classList.toggle('active',MODE==='replace');
   if(b)b.classList.toggle('active',MODE==='repair');
@@ -646,18 +647,32 @@ function renderHeader(rows){
 function sum(rows,k){return rows.reduce((a,b)=>a+(+b[k]||0),0);}
 function renderKPIs(rows){
   const totalCost=sum(rows,'c_total');
-  const len=rows.reduce((a,r)=>a+validLen(r),0);
-  const joints=sum(rows,'joint_in');
   const locs=uniq(rows.map(r=>r.location)).length;
   const byCon=rows.filter(r=>r.contractor&&r.contractor!=='ITD (ภายใน)').length;
-  const cards=[
-    ['k1','📦','จำนวนงานทั้งหมด',fmtInt(rows.length),'รายการ (ครั้ง)'],
-    ['k2','📏','ความยาวสายพานที่เปลี่ยน',fmt1(len),'เมตร'],
-    ['k3','💰','ค่าใช้จ่ายรวม','฿'+fmtM(totalCost)+' ล.','รวมทุกหมวด'],
-    ['k4','🔗','จำนวน Joint ที่ต่อ',fmtInt(joints),'รอยต่อ'],
-    ['k5','📍','จำนวนจุดที่ดำเนินงาน',fmtInt(locs),'Location'],
-    ['k6','👷','งานโดยผู้รับเหมา',fmtInt(byCon),'จาก '+rows.length+' งาน (ที่เหลือทีม ITD)'],
-  ];
+  let cards;
+  if(MODE==='repair'){            // KPI ชุดงานซ่อม (ไม่มี "ความยาว/Joint" — ไฟล์ซ่อมไม่มีข้อมูลนั้น)
+    const equip=sum(rows,'c_equip');
+    const avg=rows.length?totalCost/rows.length:0;
+    cards=[
+      ['k1','🛠️','จำนวนงานซ่อมทั้งหมด',fmtInt(rows.length),'รายการ (ครั้ง)'],
+      ['k2','🧰','ค่าอุปกรณ์ซ่อมรวม','฿'+fmtM(equip)+' ล.','เฉพาะค่าอุปกรณ์'],
+      ['k3','💰','ค่าใช้จ่ายรวม','฿'+fmtM(totalCost)+' ล.','อุปกรณ์ + ค่าแรง'],
+      ['k4','📊','ค่าซ่อมเฉลี่ย/งาน','฿'+fmtInt(avg),'ต่อรายการ'],
+      ['k5','📍','จำนวนจุดที่ซ่อม',fmtInt(locs),'Location'],
+      ['k6','👷','งานโดยผู้รับเหมา',fmtInt(byCon),'จาก '+rows.length+' งาน (ที่เหลือทีม ITD)'],
+    ];
+  }else{
+    const len=rows.reduce((a,r)=>a+validLen(r),0);
+    const joints=sum(rows,'joint_in');
+    cards=[
+      ['k1','📦','จำนวนงานทั้งหมด',fmtInt(rows.length),'รายการ (ครั้ง)'],
+      ['k2','📏','ความยาวสายพานที่เปลี่ยน',fmt1(len),'เมตร'],
+      ['k3','💰','ค่าใช้จ่ายรวม','฿'+fmtM(totalCost)+' ล.','รวมทุกหมวด'],
+      ['k4','🔗','จำนวน Joint ที่ต่อ',fmtInt(joints),'รอยต่อ'],
+      ['k5','📍','จำนวนจุดที่ดำเนินงาน',fmtInt(locs),'Location'],
+      ['k6','👷','งานโดยผู้รับเหมา',fmtInt(byCon),'จาก '+rows.length+' งาน (ที่เหลือทีม ITD)'],
+    ];
+  }
   document.getElementById('kpis').innerHTML=cards.map(c=>
     `<div class="kpi ${c[0]}"><div class="ic">${c[1]}</div><div class="lab">${c[2]}</div>
      <div class="val num">${c[3]}</div><div class="sub">${c[4]}</div></div>`).join('');
@@ -696,11 +711,18 @@ function renderTrend(rows){
             y:{stacked:true,beginAtZero:true,grid:{color:'#eef2f8'},ticks:{precision:0}}}}});
 }
 function renderJob(rows){
-  const counts=JOB_TYPES.map(j=>rows.filter(r=>r.job===j).length);
-  const idx=JOB_TYPES.map((j,i)=>i).filter(i=>counts[i]>0);
+  let labels,data,colors;
+  if(MODE==='repair'){            // ไฟล์ซ่อมไม่มีประเภทงาน → แสดงสัดส่วนตามระบบแทน
+    const sys=SYSTEMS.filter(s=>rows.some(r=>r.system===s));
+    labels=sys; data=sys.map(s=>rows.filter(r=>r.system===s).length); colors=sys.map(s=>SYS_COLOR[s]);
+  }else{
+    const counts=JOB_TYPES.map(j=>rows.filter(r=>r.job===j).length);
+    const idx=JOB_TYPES.map((j,i)=>i).filter(i=>counts[i]>0);
+    labels=idx.map(i=>JOB_TYPES[i]); data=idx.map(i=>counts[i]); colors=idx.map(i=>JOB_COLOR[i]);
+  }
   mkChart('ch-job',{type:'doughnut',data:{
-    labels:idx.map(i=>JOB_TYPES[i]),
-    datasets:[{data:idx.map(i=>counts[i]),backgroundColor:idx.map(i=>JOB_COLOR[i]),borderWidth:2,borderColor:'#fff'}]},
+    labels,
+    datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
       plugins:{legend:{position:'right',labels:{boxWidth:11,padding:7,font:{size:10}}},datalabels:DL_PCT,
       tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);const p=t?(c.parsed/t*100).toFixed(1):0;return ` ${c.label}: ${c.parsed} งาน (${p}%)`;}}}}}});
@@ -723,7 +745,7 @@ function renderCostTrend(rows){
   mkChart('ch-cost',{type:'bar',data:{labels,datasets:[{
     label:'ค่าใช้จ่าย (ล้านบาท)',data,backgroundColor:'#103f86',borderRadius:3,
     }]},options:{responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ฿${fmt1(c.parsed)} ล้านบาท`}}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ฿${fmt1(c.parsed.y)} ล้านบาท`}}},
     scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,font:{size:9}}},
             y:{beginAtZero:true,grid:{color:'#eef2f8'},ticks:{callback:v=>v+' ล.'}}}}});
 }
