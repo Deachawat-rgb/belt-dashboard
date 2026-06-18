@@ -379,6 +379,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
 <div class="drawer" id="drawer">
   <div class="drawer-head"><h3 id="drawer-title">➕ บันทึกงานเปลี่ยนสายพาน</h3><div class="x" onclick="closeDrawer()">✕</div></div>
   <div class="drawer-body">
+    <div id="form-replace">
     <div class="sec-lbl">ข้อมูลงาน</div>
     <div class="frow">
       <div class="field"><label>วันที่ *</label><input type="date" id="i-date"></div>
@@ -420,6 +421,42 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
     <div class="frow">
       <div class="field"><label>ค่าแรง ผรม</label><input type="number" id="i-ccontractor" step="1" placeholder="0"></div>
       <div class="field"><label>วิศวกรตรวจสอบ</label><input id="i-engineer" placeholder="ชื่อ-สกุล"></div>
+    </div>
+    </div><!-- /form-replace -->
+
+    <div id="form-repair" style="display:none">
+      <div class="sec-lbl">ข้อมูลงานซ่อม</div>
+      <div class="field full" style="margin-bottom:11px"><label>Equipment Name *</label><input id="ri-equip" placeholder="เช่น CONVEYOR LINE BW2400"></div>
+      <div class="frow">
+        <div class="field"><label>วันที่ *</label><input type="date" id="ri-date"></div>
+        <div class="field"><label>System *</label><select id="ri-system"></select></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Location Name *</label><input id="ri-loc" list="dl-loc" placeholder="เช่น SPD.A"></div>
+        <div class="field"><label>Joint</label><input id="ri-joint" placeholder="เช่น J1"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>SMU</label><input id="ri-smu" placeholder="เช่น 4445"></div>
+        <div class="field"><label>Brand</label><input id="ri-brand" list="dl-brand" placeholder="เช่น UBI"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Hardness (Shore A)</label><input id="ri-hard" placeholder="เช่น 61"></div>
+        <div class="field"><label>Belt thickness (mm.)</label><input id="ri-thick" placeholder="เช่น 35"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Total Belt Length (M)</label><input type="number" id="ri-len" step="0.1" placeholder="0"></div>
+        <div class="field"><label>ผู้ซ่อม</label><input id="ri-splicer" placeholder="เช่น ITD"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Width (cm.)</label><input type="number" id="ri-width" step="0.1" placeholder="0"></div>
+        <div class="field"><label>Length (cm.)</label><input type="number" id="ri-length" step="0.1" placeholder="0"></div>
+      </div>
+      <div class="sec-lbl">ค่าใช้จ่าย (บาท)</div>
+      <div class="frow">
+        <div class="field"><label>ค่าอุปกรณ์ (THB)</label><input type="number" id="ri-cequip" step="1" placeholder="0"></div>
+        <div class="field"><label>ค่าแรง (THB)</label><input type="number" id="ri-clabor" step="1" placeholder="0"></div>
+      </div>
+      <div class="field full"><label>Note</label><textarea id="ri-note" rows="2" placeholder="เช่น เริ่ม 13.30 Off 15.00"></textarea></div>
     </div>
   </div>
   <div class="drawer-foot">
@@ -595,6 +632,7 @@ function buildFilters(){
   fill('f-size',[['','ทุกขนาด'],...SIZES.map(s=>[s,s==='ไม่ระบุ'?'ไม่ระบุ':s+' มม.'])]);
   // entry form selects
   fill('i-system',SYSTEMS.map(s=>[s,s]));
+  fill('ri-system',SYSTEMS.map(s=>[s,s]));
   fill('i-job',JOB_TYPES.map(j=>[j,j]));
   fill('i-contractor',[['ITD (ภายใน)','ITD (ภายใน)'],['TKS','TKS'],['CTL','CTL']]);
   document.getElementById('dl-brand').innerHTML=uniq(DATA.map(d=>d.brand).filter(Boolean)).map(b=>`<option value="${b}">`).join('');
@@ -840,7 +878,11 @@ function renderRecent(rows){
 
 /* ================= DATA ENTRY ================= */
 function openDrawer(){
-  document.getElementById('i-date').value=new Date().toISOString().slice(0,10);
+  const today=new Date().toISOString().slice(0,10);
+  const isRep=MODE==='repair';
+  document.getElementById('form-replace').style.display=isRep?'none':'';
+  document.getElementById('form-repair').style.display=isRep?'':'none';
+  document.getElementById(isRep?'ri-date':'i-date').value=today;
   document.getElementById('drawer-bg').style.display='block';
   document.getElementById('drawer').classList.add('open');
 }
@@ -851,6 +893,7 @@ function closeDrawer(){
 function gv(id){return document.getElementById(id).value.trim();}
 function gn(id){return +document.getElementById(id).value||0;}
 function saveRecord(){
+  if(MODE==='repair'){ return saveRepair(); }
   const date=gv('i-date'),loc=gv('i-loc');
   if(!date||!loc){showToast('⚠️ กรุณากรอก วันที่ และ จุด (Location)','#e03b3b');return;}
   const d=new Date(date);
@@ -879,6 +922,38 @@ function saveRecord(){
       .catch(err=>{console.error(err);showToast('⚠️ บันทึกในเครื่องแล้ว แต่ส่งขึ้นส่วนกลางไม่สำเร็จ — '+err.message,'#e03b3b');});
   }else{
     showToast('✅ บันทึกแล้ว (โหมดในเครื่อง — ยังไม่ได้ตั้งค่า Google Sheet)');
+  }
+}
+function saveRepair(){
+  const date=gv('ri-date'),loc=gv('ri-loc'),equip=gv('ri-equip');
+  if(!date||!loc||!equip){showToast('⚠️ กรุณากรอก Equipment Name, วันที่ และ Location','#e03b3b');return;}
+  const d=new Date(date);
+  const ce=gn('ri-cequip'),cl=gn('ri-clabor');
+  const sizeM=(equip.match(/(1800|2000|2200|2400)/)||[])[1]||'';
+  const rec={
+    no:'',date,year:d.getFullYear(),month:d.getMonth()+1,ym:date.slice(0,7),
+    location:loc,system:gv('ri-system')||'อื่นๆ',job:'อื่นๆ',job_raw:equip,
+    len_in:gn('ri-len')||null,len_out:null,joint_in:null,
+    brand:gv('ri-brand'),size:sizeM,reason:gv('ri-note'),
+    puller:'',splicer:gv('ri-splicer'),contractor:'',
+    c_belt:null,c_equip:ce||null,c_labor:cl||null,c_machine:null,c_contractor:null,
+    c_total:(ce+cl)||null,recorder:AUTH.user||'',engineer:'',
+    // คอลัมน์เพิ่มเฉพาะงานซ่อม
+    equipment:equip,smu:gv('ri-smu'),hardness:gv('ri-hard'),thickness:gv('ri-thick'),
+    width:gn('ri-width')||'',length:gn('ri-length')||'',joint_label:gv('ri-joint')
+  };
+  DATA.push(rec);persist();
+  closeDrawer();buildFilters();
+  ['ri-equip','ri-loc','ri-joint','ri-smu','ri-brand','ri-hard','ri-thick','ri-len',
+   'ri-splicer','ri-width','ri-length','ri-cequip','ri-clabor','ri-note'].forEach(id=>document.getElementById(id).value='');
+  render();
+  if(CONFIG.API_URL){
+    showToast('⏳ กำลังบันทึกงานซ่อมขึ้นส่วนกลาง ('+loc+')…','#f5a623');
+    pushToSheet(rec)
+      .then(()=>{_lastFp='';syncFromSheet(true);showToast('✅ บันทึกงานซ่อมขึ้นส่วนกลางแล้ว ('+loc+')');})
+      .catch(err=>{console.error(err);showToast('⚠️ บันทึกในเครื่องแล้ว แต่ส่งส่วนกลางไม่สำเร็จ — '+err.message,'#e03b3b');});
+  }else{
+    showToast('✅ บันทึกงานซ่อมแล้ว (โหมดในเครื่อง)');
   }
 }
 function resetData(){

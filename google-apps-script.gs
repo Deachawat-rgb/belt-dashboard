@@ -30,6 +30,10 @@ var FIELDS = [
   'c_total','recorder','engineer'
 ];
 
+// คอลัมน์เพิ่มเฉพาะแท็บงานซ่อม (repair) — เก็บข้อมูลจากฟอร์มงานซ่อมที่งานเปลี่ยนไม่มี
+var REPAIR_EXTRA = ['equipment','smu','hardness','thickness','width','length','joint_label'];
+function fieldsFor_(tab){ return tabName_(tab) === 'repair' ? FIELDS.concat(REPAIR_EXTRA) : FIELDS; }
+
 // คอลัมน์ที่เป็นตัวเลข (อ่านกลับเป็น number)
 var NUMERIC = {
   year:1, month:1, len_in:1, len_out:1, joint_in:1,
@@ -73,13 +77,14 @@ function tabName_(t) { return (t && ALLOWED_TABS[t]) ? t : SHEET_NAME; }
 
 function getSheet_(tab) {
   var name = tabName_(tab);
+  var flds = fieldsFor_(tab);
   var ss = getSpreadsheet_();
   var sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);   // สร้างแท็บอัตโนมัติถ้ายังไม่มี (เช่น repair ครั้งแรก)
-    sh.appendRow(FIELDS);
+    sh.appendRow(flds);
   }
-  if (sh.getLastRow() === 0) sh.appendRow(FIELDS);
+  if (sh.getLastRow() === 0) sh.appendRow(flds);
   return sh;
 }
 
@@ -174,16 +179,17 @@ function doPost(e) {
     var sh = getSheet_(body.tab);
 
     if (body.action === 'add' && body.record) {
-      sh.appendRow(rowFromRecord_(body.record));
+      sh.appendRow(rowFromRecord_(body.record, body.tab));
       return json_({ ok: true });
     }
 
     if (body.action === 'seed' && Array.isArray(body.records)) {
       sh.clear();
-      sh.appendRow(FIELDS);
-      var rows = body.records.map(rowFromRecord_);
+      var flds = fieldsFor_(body.tab);
+      sh.appendRow(flds);
+      var rows = body.records.map(function (r) { return rowFromRecord_(r, body.tab); });
       if (rows.length) {
-        sh.getRange(2, 1, rows.length, FIELDS.length).setValues(rows);
+        sh.getRange(2, 1, rows.length, flds.length).setValues(rows);
       }
       return json_({ ok: true, inserted: rows.length });
     }
@@ -194,8 +200,8 @@ function doPost(e) {
   }
 }
 
-function rowFromRecord_(rec) {
-  return FIELDS.map(function (f) {
+function rowFromRecord_(rec, tab) {
+  return fieldsFor_(tab).map(function (f) {
     var v = rec[f];
     return (v === undefined || v === null) ? '' : v;
   });
