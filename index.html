@@ -426,6 +426,10 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
 
     <div id="form-repair" style="display:none">
       <div class="sec-lbl">ข้อมูลงานซ่อม</div>
+      <div class="frow">
+        <div class="field"><label>No.</label><input id="ri-no" placeholder="เว้นว่าง = ต่อเลขล่าสุดอัตโนมัติ"></div>
+        <div class="field" style="visibility:hidden"></div>
+      </div>
       <div class="field full" style="margin-bottom:11px"><label>Equipment Name *</label><input id="ri-equip" placeholder="เช่น CONVEYOR LINE BW2400"></div>
       <div class="frow">
         <div class="field"><label>วันที่ *</label><input type="date" id="ri-date"></div>
@@ -883,6 +887,7 @@ function openDrawer(){
   document.getElementById('form-replace').style.display=isRep?'none':'';
   document.getElementById('form-repair').style.display=isRep?'':'none';
   document.getElementById(isRep?'ri-date':'i-date').value=today;
+  if(isRep)document.getElementById('ri-no').value=nextRepairNo();   // ต่อเลขจากรายการล่าสุด
   document.getElementById('drawer-bg').style.display='block';
   document.getElementById('drawer').classList.add('open');
 }
@@ -924,6 +929,12 @@ function saveRecord(){
     showToast('✅ บันทึกแล้ว (โหมดในเครื่อง — ยังไม่ได้ตั้งค่า Google Sheet)');
   }
 }
+/* เลข No. ถัดไปของงานซ่อม = เลขมากสุดในข้อมูลปัจจุบัน + 1 (ต่อจากของเก่า) */
+function nextRepairNo(){
+  let mx=0;
+  DATA.forEach(r=>{const n=parseInt(String(r.no==null?'':r.no).replace(/[^0-9]/g,''),10);if(!isNaN(n)&&n>mx)mx=n;});
+  return mx+1;
+}
 function saveRepair(){
   const date=gv('ri-date'),loc=gv('ri-loc'),equip=gv('ri-equip');
   if(!date||!loc||!equip){showToast('⚠️ กรุณากรอก Equipment Name, วันที่ และ Location','#e03b3b');return;}
@@ -931,7 +942,7 @@ function saveRepair(){
   const ce=gn('ri-cequip'),cl=gn('ri-clabor');
   const sizeM=(equip.match(/(1800|2000|2200|2400)/)||[])[1]||'';
   const rec={
-    no:'',date,year:d.getFullYear(),month:d.getMonth()+1,ym:date.slice(0,7),
+    no:gv('ri-no')||String(nextRepairNo()),date,year:d.getFullYear(),month:d.getMonth()+1,ym:date.slice(0,7),
     location:loc,system:gv('ri-system')||'อื่นๆ',job:'อื่นๆ',job_raw:equip,
     len_in:gn('ri-len')||null,len_out:null,joint_in:null,
     brand:gv('ri-brand'),size:sizeM,reason:gv('ri-note'),
@@ -944,7 +955,7 @@ function saveRepair(){
   };
   DATA.push(rec);persist();
   closeDrawer();buildFilters();
-  ['ri-equip','ri-loc','ri-joint','ri-smu','ri-brand','ri-hard','ri-thick','ri-len',
+  ['ri-no','ri-equip','ri-loc','ri-joint','ri-smu','ri-brand','ri-hard','ri-thick','ri-len',
    'ri-width','ri-length','ri-cequip','ri-clabor','ri-note'].forEach(id=>document.getElementById(id).value='');
   render();
   if(CONFIG.API_URL){
