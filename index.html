@@ -687,10 +687,17 @@ function renderHeader(rows){
   document.getElementById('print-scope').textContent='ขอบเขตข้อมูล: '+parts.join(' · ')+'  |  จำนวน '+rows.length+' งาน';
 }
 function sum(rows,k){return rows.reduce((a,b)=>a+(+b[k]||0),0);}
+/* แยกงานผู้รับเหมา (ผรม.) ออกจากทีม ITD — ME-BE/ME-BELT/ITH/ภายใน นับเป็น ITD */
+function isCon(r){
+  var c=r.contractor||'';
+  if(c && !/ITD|ME-?BE|ME ?BELT|ITH|ภายใน/i.test(c)) return true;   // ช่องผู้รับเหมาเป็นชื่อภายนอก
+  var s=r.splicer||'';
+  return /ผรม|TKS|CTL|CLT|เจริญ/i.test(s);                          // ผู้ทำงานเป็น ผรม.
+}
 function renderKPIs(rows){
   const totalCost=sum(rows,'c_total');
   const locs=uniq(rows.map(r=>r.location)).length;
-  const byCon=rows.filter(r=>r.contractor&&r.contractor!=='ITD (ภายใน)').length;
+  const con=rows.filter(isCon).length, itd=rows.length-con;
   let cards;
   if(MODE==='repair'){            // KPI ชุดงานซ่อม (ไม่มี "ความยาว/Joint" — ไฟล์ซ่อมไม่มีข้อมูลนั้น)
     const equip=sum(rows,'c_equip');
@@ -701,7 +708,7 @@ function renderKPIs(rows){
       ['k3','💰','ค่าใช้จ่ายรวม','฿'+fmtM(totalCost)+' ล.','อุปกรณ์ + ค่าแรง'],
       ['k4','📊','ค่าซ่อมเฉลี่ย/งาน','฿'+fmtInt(avg),'ต่อรายการ'],
       ['k5','📍','จำนวนจุดที่ซ่อม',fmtInt(locs),'Location'],
-      ['k6','👷','งานโดยผู้รับเหมา',fmtInt(byCon),'จาก '+rows.length+' งาน (ที่เหลือทีม ITD)'],
+      ['k6','👷','ผู้รับเหมา / ITD',fmtInt(con)+' / '+fmtInt(itd),'ผรม. '+fmtInt(con)+' · ITD '+fmtInt(itd)+' งาน'],
     ];
   }else{
     const len=rows.reduce((a,r)=>a+validLen(r),0);
@@ -712,7 +719,7 @@ function renderKPIs(rows){
       ['k3','💰','ค่าใช้จ่ายรวม','฿'+fmtM(totalCost)+' ล.','รวมทุกหมวด'],
       ['k4','🔗','จำนวน Joint ที่ต่อ',fmtInt(joints),'รอยต่อ'],
       ['k5','📍','จำนวนจุดที่ดำเนินงาน',fmtInt(locs),'Location'],
-      ['k6','👷','งานโดยผู้รับเหมา',fmtInt(byCon),'จาก '+rows.length+' งาน (ที่เหลือทีม ITD)'],
+      ['k6','👷','ผู้รับเหมา / ITD',fmtInt(con)+' / '+fmtInt(itd),'ผรม. '+fmtInt(con)+' · ITD '+fmtInt(itd)+' งาน'],
     ];
   }
   document.getElementById('kpis').innerHTML=cards.map(c=>
