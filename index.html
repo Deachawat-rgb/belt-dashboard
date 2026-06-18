@@ -206,6 +206,54 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
 .login-err{min-height:18px;margin-top:12px;text-align:center;font-size:12.5px;font-weight:600;color:var(--red)}
 .login-foot{margin-top:16px;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.5}
 .hpill.user b{font-size:13px}
+
+/* ===================== A4 MANAGEMENT REPORT (print) ===================== */
+.print-report{display:none;max-width:740px;margin:0 auto;color:var(--ink);font-family:'Sarabun',sans-serif}
+.pr-head{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2.5px solid var(--navy);padding-bottom:6px;margin-bottom:10px}
+.pr-rtitle{font-size:17px;font-weight:800;color:var(--navy);line-height:1.15}
+.pr-rtitle span{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-top:3px;letter-spacing:.2px}
+.pr-period{font-size:10px;color:var(--muted);text-align:right;line-height:1.5;white-space:nowrap}
+.pr-sec{background:linear-gradient(100deg,var(--navy),var(--blue));color:#fff;font-size:12px;font-weight:700;padding:5px 11px;border-radius:5px;margin:13px 0 8px}
+.pr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.pr-kpi{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:7px 10px}
+.pr-kpi .l{font-size:9.5px;color:var(--muted);font-weight:600}
+.pr-kpi .v{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.4px;margin-top:1px}
+.pr-kpi .s{font-size:8.5px;color:var(--muted)}
+.pr-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:9px;align-items:start}
+.pr-table{width:100%;border-collapse:collapse;font-size:10.5px}
+.pr-table caption{text-align:left;font-size:10.5px;font-weight:700;color:var(--navy2);padding-bottom:5px}
+.pr-table th{background:#eaf1fb;color:var(--navy);text-align:right;padding:4px 7px;font-weight:700;font-size:9.5px;white-space:nowrap}
+.pr-table th:first-child,.pr-table td:first-child{text-align:left}
+.pr-table td{padding:3px 7px;border-bottom:1px solid #eef2f8;text-align:right;white-space:nowrap}
+.pr-table tr.tot td{font-weight:800;background:#f1f5fb;border-top:2px solid var(--blue)}
+.pr-chart-title{font-size:10.5px;font-weight:700;color:var(--navy2);margin-bottom:6px}
+.pr-barbox{padding-bottom:16px}
+.pr-bars{display:flex;align-items:flex-end;gap:3px;height:118px;border-bottom:1.5px solid var(--line)}
+.pr-bar{flex:1;background:linear-gradient(180deg,var(--sky),var(--navy2));border-radius:2px 2px 0 0;min-height:1px;position:relative}
+.pr-bar b{position:absolute;top:-12px;left:0;right:0;text-align:center;font-size:7.5px;font-weight:700;color:var(--navy2)}
+.pr-bar i{position:absolute;bottom:-14px;left:-3px;right:-3px;text-align:center;font-size:7px;color:var(--muted);font-style:normal}
+.pr-status{border:1px solid var(--line);border-radius:7px;padding:9px 11px;background:#fbfdff}
+.pr-status .l{font-size:10.5px;font-weight:700;color:var(--navy2);margin-bottom:5px}
+.pr-status .body{font-size:10px;line-height:1.7}
+.pr-issues{margin-top:9px;font-size:10px;color:var(--ink);font-weight:600}
+.pr-issues .ln{border-bottom:1px dotted #99a;height:16px;margin-top:5px}
+.pr-foot{margin-top:12px;font-size:8.5px;color:var(--muted);text-align:center;border-top:1px solid var(--line);padding-top:6px}
+
+/* แสดงตัวอย่างรายงานบนจอ (สำหรับพรีวิว) */
+body.show-print-report{background:#e8edf5}
+body.show-print-report .wrap>*{display:none!important}
+body.show-print-report .wrap>.brandbar{display:flex!important}
+body.show-print-report .wrap>.print-report{display:block!important;background:#fff;padding:18px 20px;margin:12px auto;box-shadow:var(--shadow);border-radius:8px}
+
+@media print{
+  @page{size:A4 portrait;margin:10mm}
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  .wrap>*{display:none!important}
+  .wrap>.brandbar{display:flex!important;box-shadow:none;border:1px solid var(--line);padding:6px 12px;margin-bottom:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap>.print-report{display:block!important;max-width:none;margin:0;padding:0;box-shadow:none}
+  .print-report,.print-report *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 </style>
 </head>
 <body>
@@ -252,7 +300,6 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
       <small>เหมืองแม่เมาะ จ.ลำปาง · ระบบสายพานลำเลียง</small>
     </div>
     <div class="brand-doc">รายงานสายพานลำเลียง<small>Continuous System Report</small></div>
-  </div>
   </div>
 
   <!-- HEADER -->
@@ -368,6 +415,38 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- ===================== A4 MANAGEMENT REPORT (print only) ===================== -->
+  <div class="print-report" id="pr-root">
+    <div class="pr-head">
+      <div class="pr-rtitle">รายงานสรุปผลการดำเนินงานประจำเดือน<span id="pr-sub">Monthly Progress Report</span></div>
+      <div class="pr-period" id="pr-period"></div>
+    </div>
+
+    <div class="pr-sec">1 · สรุปภาพรวม (Executive Summary)</div>
+    <div class="pr-kpis" id="pr-kpis"></div>
+    <div class="pr-2col">
+      <table class="pr-table" id="pr-perf"></table>
+      <div class="pr-barbox">
+        <div class="pr-chart-title">📈 แนวโน้มจำนวนงานรายเดือน</div>
+        <div class="pr-bars" id="pr-bars"></div>
+      </div>
+    </div>
+
+    <div class="pr-sec">2 · ความก้าวหน้า (Progress Report)</div>
+    <div class="pr-2col">
+      <table class="pr-table" id="pr-loc"></table>
+      <div class="pr-status">
+        <div class="l">สถานะงานและประเด็น (Status &amp; Issues)</div>
+        <div class="body" id="pr-status"></div>
+        <div class="pr-issues">ปัญหา/อุปสรรค &amp; แนวทางแก้ไข (กรอกเพิ่มก่อนส่ง):
+          <div class="ln"></div><div class="ln"></div><div class="ln"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pr-foot">ITD · Mae Moh Mine Phase 9 · รายงานนี้สร้างอัตโนมัติจากระบบ Ai belt 2026 — ตรวจสอบและลงนามก่อนนำเสนอ</div>
   </div>
 
   <footer class="foot">ITD J.2411 Mae Moh Mine Phase 9 · ระบบสรุปงานสายพานลำเลียง · ออกแบบเพื่อนำเสนอผู้บริหาร · ข้อมูลกรอกใหม่จะอัปเดตหน้านี้ทันที<br>
@@ -677,6 +756,7 @@ function render(){
   renderSize(rows);
   renderSummary(rows);
   renderRecent(rows);
+  renderPrintReport();
 }
 function renderHeader(rows){
   const dates=DATA.map(d=>d.date).sort();
@@ -889,6 +969,68 @@ function renderRecent(rows){
     <td style="text-align:left">${r.splicer||'-'}</td><td class="num">${r.c_total?fmtInt(r.c_total):'-'}</td></tr>`).join('');
 }
 
+/* ===================== รายงานผู้บริหาร A4 (print) ===================== */
+function renderPrintReport(){
+  if(!document.getElementById('pr-root'))return;
+  const rows=getFiltered();
+  const ds=rows.map(r=>r.date).filter(Boolean).sort();
+  const period=ds.length?(ds[0]+' ถึง '+ds[ds.length-1]):'—';
+  const yms=uniq(rows.map(r=>r.ym).filter(Boolean)).sort();
+  const lastYm=yms[yms.length-1]||'';
+  const lastYear=lastYm?+lastYm.slice(0,4):null;
+  const monLabel=lastYm?(THMON[+lastYm.slice(5,7)-1]+' '+lastYear):'—';
+  const mRows=rows.filter(r=>r.ym===lastYm);
+  const yRows=rows.filter(r=>r.year===lastYear);
+  const isRep=MODE==='repair';
+  const totalCost=sum(rows,'c_total');
+  const con=rows.filter(isCon).length, itd=rows.length-con;
+
+  document.getElementById('pr-sub').textContent='Monthly Progress Report — '+(isRep?'งานซ่อมสายพานลำเลียง':'งานเปลี่ยนสายพานลำเลียง');
+  document.getElementById('pr-period').innerHTML='ช่วงข้อมูล: '+period+'<br>จัดทำเมื่อ: '+new Date().toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'numeric'})+' · รวม '+fmtInt(rows.length)+' งาน';
+
+  const kpis=[
+    [isRep?'จำนวนงานซ่อม':'จำนวนงาน',fmtInt(rows.length),'รายการ'],
+    ['ค่าใช้จ่ายรวม','฿'+fmtM(totalCost)+' ล.','ทุกหมวด'],
+    ['ค่าเฉลี่ย/งาน','฿'+fmtInt(rows.length?totalCost/rows.length:0),'ต่อรายการ'],
+    ['จำนวนจุด',fmtInt(uniq(rows.map(r=>r.location)).length),'Location'],
+    ['โดยผู้รับเหมา (ผรม.)',fmtInt(con),'งาน'],
+    ['โดยทีม ITD',fmtInt(itd),'งาน'],
+  ];
+  document.getElementById('pr-kpis').innerHTML=kpis.map(k=>`<div class="pr-kpi"><div class="l">${k[0]}</div><div class="v num">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
+
+  const perf=[
+    ['จำนวนงาน (งาน)',fmtInt(mRows.length),fmtInt(yRows.length)],
+    ['ค่าใช้จ่าย (บาท)',fmtInt(sum(mRows,'c_total')),fmtInt(sum(yRows,'c_total'))],
+    ['โดย ผรม. (งาน)',fmtInt(mRows.filter(isCon).length),fmtInt(yRows.filter(isCon).length)],
+    ['โดยทีม ITD (งาน)',fmtInt(mRows.length-mRows.filter(isCon).length),fmtInt(yRows.length-yRows.filter(isCon).length)],
+  ];
+  document.getElementById('pr-perf').innerHTML='<caption>ผลการดำเนินงาน — เดือนล่าสุด เทียบ สะสมทั้งปี (YTD)</caption>'+
+    `<tr><th>ตัวชี้วัด</th><th>${monLabel}</th><th>สะสมปี ${lastYear||''}</th></tr>`+
+    perf.map(p=>`<tr><td>${p[0]}</td><td class="num">${p[1]}</td><td class="num">${p[2]}</td></tr>`).join('');
+
+  const tYms=yms.slice(-14);
+  const counts=tYms.map(ym=>rows.filter(r=>r.ym===ym).length);
+  const mx=Math.max(1,...counts);
+  document.getElementById('pr-bars').innerHTML=tYms.map((ym,i)=>{
+    const h=Math.max(2,Math.round(counts[i]/mx*100));const[y,m]=ym.split('-');
+    return `<div class="pr-bar" style="height:${h}%"><b>${counts[i]||''}</b><i>${THMON[+m-1]} ${(+y)%100}</i></div>`;
+  }).join('');
+
+  const lmap={};rows.forEach(r=>{const k=r.location||'-';(lmap[k]=lmap[k]||{n:0,c:0}).n++;lmap[k].c+=(+r.c_total||0);});
+  const top=Object.entries(lmap).sort((a,b)=>b[1].n-a[1].n).slice(0,8);
+  document.getElementById('pr-loc').innerHTML='<caption>งานตามจุดติดตั้ง (สูงสุด 8 จุด)</caption>'+
+    '<tr><th>จุด</th><th>งาน</th><th>ค่าใช้จ่าย (บาท)</th></tr>'+
+    top.map(t=>`<tr><td>${t[0]}</td><td class="num">${t[1].n}</td><td class="num">${fmtInt(t[1].c)}</td></tr>`).join('')+
+    `<tr class="tot"><td>รวม ${uniq(rows.map(r=>r.location)).length} จุด</td><td class="num">${fmtInt(rows.length)}</td><td class="num">${fmtInt(totalCost)}</td></tr>`;
+
+  const topLoc=top.length?top[0][0]:'—';
+  document.getElementById('pr-status').innerHTML=
+    `เดือน <b>${monLabel}</b> ดำเนินการ${isRep?'ซ่อม':'เปลี่ยน'}สายพาน <b>${fmtInt(mRows.length)} งาน</b> `+
+    `คิดเป็นค่าใช้จ่าย <b>฿${fmtInt(sum(mRows,'c_total'))}</b> &nbsp;|&nbsp; `+
+    `สะสมทั้งปี ${lastYear||''} รวม <b>${fmtInt(yRows.length)} งาน</b> (฿${fmtInt(sum(yRows,'c_total'))})<br>`+
+    `จุดที่ดำเนินงานมากที่สุด: <b>${topLoc}</b> &nbsp;|&nbsp; แบ่งเป็นทีม ITD <b>${fmtInt(itd)} งาน</b> / ผู้รับเหมา <b>${fmtInt(con)} งาน</b>`;
+}
+
 /* ================= DATA ENTRY ================= */
 function openDrawer(){
   const today=new Date().toISOString().slice(0,10);
@@ -1048,7 +1190,7 @@ function startApp(){
 /* เริ่มต้น: ถ้ามี token อยู่แล้ว (เซสชันเดิม) เข้าใช้งานต่อ ไม่งั้นแสดงหน้า login */
 if(AUTH.token){ startApp(); } else { showLogin(); }
 
-window.addEventListener('beforeprint',()=>{PRINT_MODE=true;renderSummary(getFiltered());});
+window.addEventListener('beforeprint',()=>{PRINT_MODE=true;renderPrintReport();renderSummary(getFiltered());});
 window.addEventListener('afterprint',()=>{PRINT_MODE=false;renderSummary(getFiltered());});
 </script>
 </body>
