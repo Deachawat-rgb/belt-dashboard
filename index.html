@@ -445,7 +445,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
       </div>
       <div class="frow">
         <div class="field"><label>Total Belt Length (M)</label><input type="number" id="ri-len" step="0.1" placeholder="0"></div>
-        <div class="field"><label>ผู้ซ่อม</label><input id="ri-splicer" placeholder="เช่น ITD"></div>
+        <div class="field"><label>ผู้ซ่อม</label><select id="ri-splicer"><option value="ITD">ITD (ทีมงานภายใน)</option><option value="ผรม.">ผรม. (ผู้รับเหมาภายนอก)</option></select></div>
       </div>
       <div class="frow">
         <div class="field"><label>Width (cm.)</label><input type="number" id="ri-width" step="0.1" placeholder="0"></div>
@@ -935,7 +935,7 @@ function saveRepair(){
     location:loc,system:gv('ri-system')||'อื่นๆ',job:'อื่นๆ',job_raw:equip,
     len_in:gn('ri-len')||null,len_out:null,joint_in:null,
     brand:gv('ri-brand'),size:sizeM,reason:gv('ri-note'),
-    puller:'',splicer:gv('ri-splicer'),contractor:'',
+    puller:'',splicer:gv('ri-splicer'),contractor:(gv('ri-splicer')==='ผรม.'?'ผรม.':'ITD (ภายใน)'),
     c_belt:null,c_equip:ce||null,c_labor:cl||null,c_machine:null,c_contractor:null,
     c_total:(ce+cl)||null,recorder:AUTH.user||'',engineer:'',
     // คอลัมน์เพิ่มเฉพาะงานซ่อม
@@ -945,7 +945,7 @@ function saveRepair(){
   DATA.push(rec);persist();
   closeDrawer();buildFilters();
   ['ri-equip','ri-loc','ri-joint','ri-smu','ri-brand','ri-hard','ri-thick','ri-len',
-   'ri-splicer','ri-width','ri-length','ri-cequip','ri-clabor','ri-note'].forEach(id=>document.getElementById(id).value='');
+   'ri-width','ri-length','ri-cequip','ri-clabor','ri-note'].forEach(id=>document.getElementById(id).value='');
   render();
   if(CONFIG.API_URL){
     showToast('⏳ กำลังบันทึกงานซ่อมขึ้นส่วนกลาง ('+loc+')…','#f5a623');
