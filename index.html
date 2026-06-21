@@ -354,16 +354,6 @@ body.show-print-report .wrap>.print-report{display:block!important;background:#f
   <!-- KPI -->
   <div class="kpis" id="kpis"></div>
 
-  <!-- ROW 0: overall yearly trend (better/worse) -->
-  <div class="grid no-print">
-    <div class="panel">
-      <h3>📈 แนวโน้มภาพรวมรายปี — ดีขึ้นหรือแย่ลง<span class="tag" id="t-yeartrend"></span></h3>
-      <div class="trend-verdict" id="trend-verdict"></div>
-      <div class="chartbox tall"><canvas id="ch-yeartrend"></canvas></div>
-      <div class="trend-note" id="trend-note"></div>
-    </div>
-  </div>
-
   <!-- ROW 1: trend + job mix + cost mix -->
   <div class="grid g-3">
     <div class="panel">
@@ -401,6 +391,16 @@ body.show-print-report .wrap>.print-report{display:block!important;background:#f
     <div class="panel">
       <h3>🏗️ ขนาดสายพานแยกตามระบบ (ไลน์)<span class="tag">เฉพาะที่ระบุขนาด</span></h3>
       <div class="chartbox"><canvas id="ch-sizesys"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 3.5: overall yearly trend (better/worse) -->
+  <div class="grid no-print">
+    <div class="panel">
+      <h3>📈 แนวโน้มภาพรวมรายปี — ดีขึ้นหรือแย่ลง<span class="tag" id="t-yeartrend"></span></h3>
+      <div class="trend-verdict" id="trend-verdict"></div>
+      <div class="chartbox tall"><canvas id="ch-yeartrend"></canvas></div>
+      <div class="trend-note" id="trend-note"></div>
     </div>
   </div>
 
