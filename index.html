@@ -622,8 +622,15 @@ function normalizeRow(r){
   // กันค่าตัวเลขที่อาจมาเป็น string
   ['len_in','joint_in','c_belt','c_equip','c_labor','c_machine','c_contractor','c_total']
     .forEach(k=>{ if(r[k]==='' ) r[k]=null; else if(r[k]!=null) r[k]=+r[k]; });
+  // ถ้าไม่ได้กรอกยอดรวม (เช่นแก้ในชีตตรงๆ ใส่แค่ค่าอุปกรณ์/ค่าแรง) → คำนวณ c_total ให้อัตโนมัติ
+  if(!r.c_total){
+    const s=(+r.c_belt||0)+(+r.c_equip||0)+(+r.c_labor||0)+(+r.c_machine||0)+(+r.c_contractor||0);
+    if(s) r.c_total=s;
+  }
   return r;
 }
+/* hash ข้อความสั้นๆ — ใช้จับว่าข้อมูลในชีตเปลี่ยนไหม (จับได้ทั้ง เพิ่ม/แก้/ลบ) */
+function _hashStr(s){let h=5381;for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return h;}
 
 /* ---- ดึงข้อมูลทั้งหมดจาก Google Sheet (ต้องมี token) ---- */
 let _lastFp='';
@@ -635,15 +642,17 @@ async function syncFromSheet(silent){
   try{
     const res=await fetch(CONFIG.API_URL+'?token='+encodeURIComponent(AUTH.token)+'&tab='+TABS[reqMode]+'&t='+Date.now());
     if(!res.ok)throw new Error('HTTP '+res.status);
-    const rows=await res.json();
+    const txt=await res.text();
+    let rows;
+    try{rows=JSON.parse(txt);}catch(e){throw new Error('bad payload');}
     if(!Array.isArray(rows)){               // {error:'auth'} = token หมดอายุ/ไม่ถูกต้อง
       if(rows&&rows.error==='auth'){handleAuthExpired();return;}
       throw new Error('bad payload');
     }
     if(reqMode!==MODE)return;     // ผู้ใช้สลับหน้าไปแล้ว — ทิ้งผลลัพธ์ของโหมดเก่า
-    rows.forEach(normalizeRow);   // จัดรูปแบบวันที่/ตัวเลขให้ตรงกับที่ dashboard ใช้
-    const fp=rows.length+'|'+(rows.length?JSON.stringify(rows[rows.length-1]):'');
+    const fp=txt.length+'|'+_hashStr(txt);   // จับการเปลี่ยนแปลงจากข้อมูลดิบ (เพิ่ม/แก้/ลบ แถวไหนก็จับได้)
     if(fp!==_lastFp){              // อัปเดตหน้าจอเฉพาะเมื่อข้อมูลเปลี่ยน
+      rows.forEach(normalizeRow);   // จัดรูปแบบวันที่/ตัวเลขให้ตรงกับที่ dashboard ใช้
       _lastFp=fp;DATA=rows;persist();
       buildFilters();render();
     }
