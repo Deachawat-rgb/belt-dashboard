@@ -104,6 +104,17 @@ header.topbar{background:linear-gradient(105deg,var(--navy) 0%,var(--navy2) 55%,
 .chartbox{position:relative;height:230px}
 .chartbox.sm{height:200px}
 .chartbox.tall{height:300px}
+/* แนวโน้มภาพรวมรายปี — ป้ายบอกทิศทาง ดีขึ้น/แย่ลง */
+.trend-verdict{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 12px}
+.vbadge{flex:1;min-width:150px;border-radius:12px;padding:11px 14px;border:1.5px solid;display:flex;flex-direction:column;gap:1px}
+.vbadge.good{background:#ecfdf3;border-color:#abefc6;color:#067647}
+.vbadge.bad{background:#fef3f2;border-color:#fecdca;color:#b42318}
+.vbadge.flat{background:#f2f4f7;border-color:#e4e7ec;color:#475467}
+.vbadge .vb-l{font-size:11.5px;font-weight:600;opacity:.85}
+.vbadge .vb-m{font-size:23px;font-weight:800;line-height:1.1;letter-spacing:-.5px}
+.vbadge .vb-s{font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px}
+.vbadge .vb-d{font-size:10.5px;font-weight:500;opacity:.8}
+.trend-note{font-size:11px;color:var(--muted);margin-top:9px;line-height:1.5}
 
 /* ---------- table ---------- */
 .tbl-scroll{overflow:auto;max-height:340px;border-radius:8px}
@@ -342,6 +353,16 @@ body.show-print-report .wrap>.print-report{display:block!important;background:#f
 
   <!-- KPI -->
   <div class="kpis" id="kpis"></div>
+
+  <!-- ROW 0: overall yearly trend (better/worse) -->
+  <div class="grid no-print">
+    <div class="panel">
+      <h3>📈 แนวโน้มภาพรวมรายปี — ดีขึ้นหรือแย่ลง<span class="tag" id="t-yeartrend"></span></h3>
+      <div class="trend-verdict" id="trend-verdict"></div>
+      <div class="chartbox tall"><canvas id="ch-yeartrend"></canvas></div>
+      <div class="trend-note" id="trend-note"></div>
+    </div>
+  </div>
 
   <!-- ROW 1: trend + job mix + cost mix -->
   <div class="grid g-3">
@@ -757,6 +778,7 @@ function render(){
   const rows=getFiltered();
   renderHeader(rows);
   renderKPIs(rows);
+  renderYearTrend(rows);
   renderTrend(rows);
   renderJob(rows);
   renderCostMix(rows);
@@ -835,6 +857,66 @@ if(window.ChartDataLabels){Chart.register(ChartDataLabels);Chart.defaults.set('p
 const DL_PCT={display:true,color:'#fff',font:{weight:'700',size:11},textStrokeColor:'rgba(0,0,0,.25)',textStrokeWidth:2,
   formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+(+b||0),0);const p=t?v/t*100:0;return p>=5?Math.round(p)+'%':'';}};
 
+/* เส้นแนวโน้ม (linear regression) — คืนค่าที่ fit แล้วของแต่ละจุด + ความชัน */
+function linreg(ys){
+  const n=ys.length; if(n<2) return {fit:ys.slice(),slope:0};
+  let sx=0,sy=0,sxy=0,sxx=0;
+  for(let i=0;i<n;i++){sx+=i;sy+=ys[i];sxy+=i*ys[i];sxx+=i*i;}
+  const den=(n*sxx-sx*sx)||1;
+  const b=(n*sxy-sx*sy)/den, a=(sy-b*sx)/n;
+  return {fit:ys.map((_,i)=>a+b*i),slope:b};
+}
+/* ป้ายบอกทิศทาง: ลดลง = ดีขึ้น (เขียว), เพิ่มขึ้น = ต้องเฝ้าระวัง (แดง) */
+function verdictBadge(label,vals,fmtVal){
+  const first=vals[0], last=vals[vals.length-1];
+  const diff=last-first, pct=first?diff/first*100:(last?100:0);
+  const dir=diff<-1e-9?'down':(diff>1e-9?'up':'flat');
+  const cls=dir==='down'?'good':dir==='up'?'bad':'flat';
+  const arrow=dir==='down'?'▼':dir==='up'?'▲':'▬';
+  const word=dir==='down'?'ดีขึ้น (ลดลง)':dir==='up'?'ต้องเฝ้าระวัง (เพิ่มขึ้น)':'คงที่';
+  const pctTxt=(dir==='flat')?'0%':(diff<0?'-':'+')+Math.abs(pct).toFixed(0)+'%';
+  return `<div class="vbadge ${cls}"><div class="vb-l">${label}</div>`+
+    `<div class="vb-m">${arrow} ${pctTxt}</div>`+
+    `<div class="vb-s">${word}</div>`+
+    `<div class="vb-d">${fmtVal(first)} → ${fmtVal(last)}</div></div>`;
+}
+/* แนวโน้มภาพรวมรายปี: แท่ง=จำนวนงาน (แกนซ้าย) + เส้น=ค่าใช้จ่าย ล้านบาท (แกนขวา) + เส้นเทรนด์ */
+function renderYearTrend(rows){
+  const vEl=document.getElementById('trend-verdict'), nEl=document.getElementById('trend-note'),
+        tEl=document.getElementById('t-yeartrend');
+  const years=uniq(DATA.map(d=>+d.year).filter(y=>y&&y>1900)).sort((a,b)=>a-b);
+  if(years.length===0){vEl.innerHTML='';nEl.textContent='';tEl.textContent='';noData('ch-yeartrend');return;}
+  const counts=years.map(y=>rows.filter(r=>+r.year===y).length);
+  const costs =years.map(y=>sum(rows.filter(r=>+r.year===y),'c_total')/1e6);
+  const cntFit=linreg(counts).fit;
+  tEl.textContent=years[0]+' → '+years[years.length-1];
+  // ป้ายสรุป (ต้องมี ≥2 ปีถึงเทียบทิศทางได้)
+  if(years.length>=2){
+    vEl.innerHTML=
+      verdictBadge('จำนวนงาน'+(MODE==='repair'?'ซ่อม':'เปลี่ยน')+' (ปีแรก→ปีล่าสุด)',counts,v=>fmtInt(v)+' งาน')+
+      verdictBadge('ค่าใช้จ่ายรวม (ปีแรก→ปีล่าสุด)',costs,v=>'฿'+fmt1(v)+' ล.');
+  }else{ vEl.innerHTML='<div class="vbadge flat"><div class="vb-l">มีข้อมูลปีเดียว</div><div class="vb-s">ต้องมี ≥ 2 ปีจึงเทียบแนวโน้มได้</div></div>'; }
+  mkChart('ch-yeartrend',{data:{labels:years.map(String),datasets:[
+    {type:'bar',label:'จำนวนงาน',data:counts,backgroundColor:'#1f6fd6',borderRadius:4,yAxisID:'y',order:3,
+      datalabels:{display:true,anchor:'end',align:'end',color:'#0a2a5e',font:{weight:'700',size:11},formatter:v=>fmtInt(v)}},
+    {type:'line',label:'เส้นแนวโน้มจำนวนงาน',data:cntFit,borderColor:'#0a2a5e',borderDash:[7,5],borderWidth:2,
+      pointRadius:0,yAxisID:'y',order:1,fill:false,datalabels:{display:false}},
+    {type:'line',label:'ค่าใช้จ่าย (ล้านบาท)',data:costs,borderColor:'#f2741f',backgroundColor:'#f2741f',borderWidth:3,
+      pointRadius:5,pointBackgroundColor:'#f2741f',tension:.25,yAxisID:'y1',order:2,datalabels:{display:false}}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    layout:{padding:{top:18,right:6}},
+    plugins:{legend:{position:'bottom',labels:{boxWidth:11,padding:10,font:{size:10.5}}},
+      tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='y1'?` ค่าใช้จ่าย: ฿${fmt1(c.parsed.y)} ล้านบาท`:` ${c.dataset.label}: ${fmtInt(c.parsed.y)} งาน`}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:12,weight:'700'}}},
+      y:{position:'left',beginAtZero:true,grid:{color:'#eef2f8'},ticks:{precision:0},title:{display:true,text:'จำนวนงาน',font:{size:10}}},
+      y1:{position:'right',beginAtZero:true,grid:{display:false},ticks:{callback:v=>v+' ล.'},title:{display:true,text:'ค่าใช้จ่าย (ล้านบาท)',font:{size:10}}}}}});
+  // หมายเหตุบริบทข้อมูล
+  const c0=counts[0],cN=counts[counts.length-1];
+  let msg='อ่านกราฟ: แท่งน้ำเงิน = จำนวนงานต่อปี · เส้นส้ม = ค่าใช้จ่าย (ล้านบาท) · เส้นประ = ทิศทางแนวโน้มจำนวนงาน. ทิศทางลดลง = ดีขึ้น (งานบำรุงรักษาน้อยลง).';
+  if(MODE==='repair' && years.includes(2023) && c0>=cN*2)
+    msg+=' หมายเหตุ: ปี '+years[0]+' มีจำนวนสูงเป็นพิเศษเพราะเป็นการนำเข้าข้อมูลย้อนหลังครั้งแรก จึงควรเทียบแนวโน้มจริงจากปี 2024 เป็นต้นไป.';
+  nEl.textContent=msg;
+}
 function renderTrend(rows){
   const yms=uniq(DATA.map(d=>d.ym)).sort();
   const sysInUse=SYSTEMS.filter(s=>rows.some(r=>r.system===s));
