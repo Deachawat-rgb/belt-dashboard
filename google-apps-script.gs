@@ -101,6 +101,69 @@ function migrateData() {
   return 'OK: ย้ายข้อมูล ' + (vals.length - 1) + ' รายการเรียบร้อย';
 }
 
+/* ============================================================
+ *  จัดรูปแบบชีตให้อ่านง่าย — รันครั้งเดียว (เลือก formatSheets > Run)
+ *  ⚠️ ฟังก์ชันนี้แก้แค่ "รูปแบบ" (สี/เส้น/ฟอนต์/ความกว้าง/ตรึงหัว)
+ *     ไม่แตะค่าข้อมูลในเซลล์แม้แต่ช่องเดียว — ข้อมูลไม่หาย ไม่เปลี่ยน
+ *  ทำทั้งแท็บ data (งานเปลี่ยน) และ repair (งานซ่อม)
+ * ============================================================ */
+function formatSheets() {
+  var ss = getSpreadsheet_();
+  var COST = { c_belt:1, c_equip:1, c_labor:1, c_machine:1, c_contractor:1, c_total:1 };
+  var NUM2 = { len_in:1, len_out:1, joint_in:1, smu:1, width:1, length:1, thickness:1 };
+  var done = [];
+  ['data', 'repair'].forEach(function (name) {
+    var sh = ss.getSheetByName(name);
+    if (!sh) return;
+    var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+    if (lastRow < 1 || lastCol < 1) return;
+
+    // 1) ตรึงแถวหัวตาราง ให้เลื่อนลงแล้วยังเห็นชื่อคอลัมน์
+    sh.setFrozenRows(1);
+
+    // 2) แต่งหัวตาราง: พื้นน้ำเงินกรมท่า ตัวอักษรขาว ตัวหนา จัดกึ่งกลาง
+    sh.getRange(1, 1, 1, lastCol)
+      .setBackground('#0a2a5e').setFontColor('#ffffff').setFontWeight('bold')
+      .setHorizontalAlignment('center').setVerticalAlignment('middle')
+      .setWrap(true).setFontSize(10);
+    sh.setRowHeight(1, 40);
+
+    // 3) เนื้อข้อมูล: ฟอนต์อ่านง่าย จัดแนวตั้งกึ่งกลาง
+    if (lastRow > 1) {
+      sh.getRange(2, 1, lastRow - 1, lastCol).setFontSize(10).setVerticalAlignment('middle');
+    }
+
+    // 4) รูปแบบตัวเลขตามชื่อคอลัมน์ (เงินใส่ลูกน้ำ, ปี/เดือนเป็นจำนวนเต็ม, วันที่)
+    var heads = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    var n = Math.max(lastRow - 1, 1);
+    for (var c = 0; c < heads.length; c++) {
+      var key = String(heads[c]).trim();
+      var col = sh.getRange(2, c + 1, n, 1);
+      if (COST[key]) col.setNumberFormat('#,##0');
+      else if (NUM2[key]) col.setNumberFormat('#,##0.##');
+      else if (key === 'year' || key === 'month') col.setNumberFormat('0');
+      else if (key === 'date') col.setNumberFormat('yyyy-mm-dd');
+    }
+
+    // 5) สลับสีแถวเว้นแถว (อ่านง่ายขึ้น) — ลบของเดิมก่อนกันชนกัน
+    sh.getBandings().forEach(function (b) { b.remove(); });
+    if (lastRow > 1) {
+      sh.getRange(2, 1, lastRow - 1, lastCol)
+        .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY, false, false);
+    }
+
+    // 6) ปรับความกว้างคอลัมน์อัตโนมัติ แล้วคุมไม่ให้กว้าง/แคบเกินไป
+    sh.autoResizeColumns(1, lastCol);
+    for (var c2 = 1; c2 <= lastCol; c2++) {
+      var w = sh.getColumnWidth(c2);
+      if (w > 230) sh.setColumnWidth(c2, 230);
+      else if (w < 55) sh.setColumnWidth(c2, 55);
+    }
+    done.push(name + ' (' + (lastRow - 1) + ' แถว)');
+  });
+  return 'OK: จัดรูปแบบเรียบร้อย — ' + (done.join(', ') || 'ไม่พบแท็บ') + ' · ข้อมูลไม่ถูกแก้';
+}
+
 /* ---------- token utilities ---------- */
 function hex_(bytes) {
   return bytes.map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
