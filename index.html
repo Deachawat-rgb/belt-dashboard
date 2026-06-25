@@ -166,7 +166,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
 /* ---------- print A4 ---------- */
 .print-only{display:none}
 @media print{
-  @page{size:A4 landscape;margin:6mm}
+  @page{size:A4 portrait;margin:7mm}
   body{background:#fff;font-size:8.5px}
   .wrap{max-width:none;padding:0}
   .no-print{display:none!important}
@@ -229,7 +229,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
 .pr-head{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2.5px solid var(--navy);padding-bottom:6px;margin-bottom:10px}
 .pr-rtitle{font-size:17px;font-weight:800;color:var(--navy);line-height:1.15}
 .pr-rtitle span{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-top:3px;letter-spacing:.2px}
-.pr-period{font-size:10px;color:var(--muted);text-align:right;line-height:1.5;white-space:nowrap}
+.pr-period{font-size:10px;color:var(--muted);text-align:right;line-height:1.5}
 .pr-sec{background:linear-gradient(100deg,var(--navy),var(--blue));color:#fff;font-size:12px;font-weight:700;padding:5px 11px;border-radius:5px;margin:13px 0 8px}
 .pr-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .pr-kpi{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:6px;padding:7px 10px}
@@ -239,9 +239,9 @@ footer.foot{text-align:center;color:var(--muted);font-size:11px;padding:18px 0 8
 .pr-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:9px;align-items:start}
 .pr-table{width:100%;border-collapse:collapse;font-size:10.5px}
 .pr-table caption{text-align:left;font-size:10.5px;font-weight:700;color:var(--navy2);padding-bottom:5px}
-.pr-table th{background:#eaf1fb;color:var(--navy);text-align:right;padding:4px 7px;font-weight:700;font-size:9.5px;white-space:nowrap}
+.pr-table th{background:#eaf1fb;color:var(--navy);text-align:right;padding:4px 7px;font-weight:700;font-size:9.5px}
 .pr-table th:first-child,.pr-table td:first-child{text-align:left}
-.pr-table td{padding:3px 7px;border-bottom:1px solid #eef2f8;text-align:right;white-space:nowrap}
+.pr-table td{padding:3px 7px;border-bottom:1px solid #eef2f8;text-align:right}
 .pr-table tr.tot td{font-weight:800;background:#f1f5fb;border-top:2px solid var(--blue)}
 .pr-chart-title{font-size:10.5px;font-weight:700;color:var(--navy2);margin-bottom:6px}
 .pr-barbox{padding-bottom:16px}
@@ -275,9 +275,11 @@ body.show-print-report .wrap>.print-report{display:block!important;background:#f
   .pr-2col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .pr-2col>*{min-width:0;overflow:hidden}
   .pr-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
-  /* ตาราง inline ใน pr-extra ต้องพอดีช่อง */
+  /* ตารางทุกตัวใน print-report ต้องพอดีช่อง — ไม่ล้น */
+  .pr-table,.pr-table th,.pr-table td{white-space:normal}
+  .pr-table{table-layout:fixed;width:100%}
   #pr-extra table{width:100%;table-layout:fixed}
-  #pr-extra td,#pr-extra th{overflow:hidden;word-break:break-word}
+  #pr-extra td,#pr-extra th{overflow:hidden;word-break:break-word;white-space:normal}
   /* brandbar logo ย่อขนาดให้พอดี */
   .brandbar .logo-box img{height:32px}
   .brandbar{font-size:10px}
