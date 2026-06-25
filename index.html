@@ -264,13 +264,23 @@ body.show-print-report .wrap>.brandbar{display:flex!important}
 body.show-print-report .wrap>.print-report{display:block!important;background:#fff;padding:18px 20px;margin:12px auto;box-shadow:var(--shadow);border-radius:8px}
 
 @media print{
-  @page{size:A4 portrait;margin:10mm}
+  @page{size:A4 portrait;margin:7mm}
   body{background:#fff}
-  .wrap{max-width:none;padding:0}
+  .wrap{max-width:none;padding:0;overflow:hidden}
   .wrap>*{display:none!important}
-  .wrap>.brandbar{display:flex!important;box-shadow:none;border:1px solid var(--line);padding:6px 12px;margin-bottom:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .wrap>.print-report{display:block!important;max-width:none;margin:0;padding:0;box-shadow:none}
+  .wrap>.brandbar{display:flex!important;box-shadow:none;border:1px solid var(--line);padding:5px 10px;margin-bottom:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap>.print-report{display:block!important;max-width:100%;width:100%;margin:0;padding:0;box-shadow:none;overflow:hidden}
   .print-report,.print-report *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* ป้องกัน grid column ขยายเกิน */
+  .pr-2col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .pr-2col>*{min-width:0;overflow:hidden}
+  .pr-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  /* ตาราง inline ใน pr-extra ต้องพอดีช่อง */
+  #pr-extra table{width:100%;table-layout:fixed}
+  #pr-extra td,#pr-extra th{overflow:hidden;word-break:break-word}
+  /* brandbar logo ย่อขนาดให้พอดี */
+  .brandbar .logo-box img{height:32px}
+  .brandbar{font-size:10px}
 }
 </style>
 </head>
