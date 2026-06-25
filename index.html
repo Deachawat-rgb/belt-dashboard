@@ -280,9 +280,18 @@ body.show-print-report .wrap>.print-report{display:block!important;background:#f
   .pr-table{table-layout:fixed;width:100%}
   #pr-extra table{width:100%;table-layout:fixed}
   #pr-extra td,#pr-extra th{overflow:hidden;word-break:break-word;white-space:normal}
-  /* brandbar logo ย่อขนาดให้พอดี */
-  .brandbar .logo-box img{height:32px}
-  .brandbar{font-size:10px}
+  /* brandbar — ต้องระบุ class ที่ใช้จริงใน HTML ไม่ใช่ logo-box */
+  .wrap>.brandbar{width:100%;max-width:100%;overflow:hidden;box-sizing:border-box;flex-wrap:nowrap;gap:8px;padding:4px 8px}
+  .brand-mono{width:32px;height:32px;flex:none}
+  .bw1{font-size:12px}
+  .bw2{font-size:6px;letter-spacing:2px}
+  .bw3{font-size:6px}
+  .brand-site b{font-size:9px}
+  .brand-site small{font-size:7px}
+  .brand-doc{font-size:9px;white-space:nowrap}
+  .brand-doc small{font-size:7px}
+  /* ป้องกัน html/body ล้นแนวนอน */
+  html,body{overflow-x:hidden;max-width:100%}
 }
 </style>
 </head>
